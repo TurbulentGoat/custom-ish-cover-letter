@@ -1,0 +1,139 @@
+// ==UserScript==
+// @name         Seek Cover Letter Generator v3
+// @namespace    http://tampermonkey.net/
+// @version      3.0
+// @description  Generates a concise, personalized cover letter for jobs on seek.com.au
+// @author       Turbulentgoat
+// @match        *://www.seek.com.au/*
+// @grant        none
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    const button = document.createElement('button');
+    button.textContent = 'Generate Cover Letter';
+    Object.assign(button.style, {
+        position: 'fixed', top: '150px', right: '100px',
+        padding: '16px', zIndex: '1000',
+        backgroundColor: '#e60278', color: 'white',
+        borderRadius: '10px', border: 'none',
+        cursor: 'pointer'
+    });
+    document.body.appendChild(button);
+
+    button.addEventListener('click', () => {
+        const jobTitleElement = document.querySelector('[data-automation="job-detail-title"]');
+        const companyNameElement = document.querySelector('[data-automation="advertiser-name"]');
+
+        if (!jobTitleElement || !companyNameElement) {
+            alert('Please ensure you are on a job listing page.');
+            return;
+        }
+
+        let jobTitle = jobTitleElement.innerText || 'Job Title';
+        const companyName = companyNameElement.innerText || 'Company Name';
+        jobTitle = jobTitle.split('-')[0].trim();
+
+        const coverLetterWindow = window.open('', '', 'width=800,height=600');
+        coverLetterWindow.jobTitle = jobTitle;
+        coverLetterWindow.companyName = companyName;
+
+        coverLetterWindow.document.write(`
+<html>
+<head>
+  <title>Generate Cover Letter</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 1rem; }
+    button { margin: 0.5rem; padding: 0.5rem 1rem; background-color: #28a745; color: white; border: none; cursor: pointer; }
+    textarea { width: 100%; margin-bottom: 1rem; resize: vertical; }
+    label { font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>Customize Your Cover Letter</h2>
+  <p>For a stronger letter, fill in the fields below.</p>
+  <form id="detailsForm">
+    <label for="topSkills">Top Skills ("I am..." e.g., confident in problem-solving, teamwork etc):</label><br>
+    <textarea id="topSkills" name="topSkills" rows="2" placeholder="List 2-3 skills matching the job"></textarea><br>
+    <label for="companyInterest">Why This Company? ("I am drawn to company, because... " e.g., I admire your innovation):</label><br>
+    <textarea id="companyInterest" name="companyInterest" rows="2" placeholder="Add a company-specific reason"></textarea><br>
+    <input type="submit" value="Generate Cover Letter">
+    <button type="button" id="saveDetails">Save Details</button>
+    <button type="button" id="loadDetails">Load Saved Details</button>
+    <button type="button" id="clearDetails">Clear Saved Details</button>
+  </form>
+  <script>
+    const jobTitle = window.jobTitle;
+    const companyName = window.companyName;
+
+    // Load saved details
+    const savedSkills = localStorage.getItem('coverLetterTopSkills');
+    const savedAchievement = localStorage.getItem('coverLetterKeyAchievement');
+    if (savedSkills) document.getElementById('topSkills').value = savedSkills;
+    if (savedAchievement) document.getElementById('keyAchievement').value = savedAchievement;
+
+    // Save details
+    document.getElementById('saveDetails').addEventListener('click', () => {
+      const skills = document.getElementById('topSkills').value;
+      const achievement = document.getElementById('keyAchievement').value;
+      localStorage.setItem('coverLetterTopSkills', skills);
+      alert('Details saved!');
+    });
+
+    // Load details
+    document.getElementById('loadDetails').addEventListener('click', () => {
+      const skills = localStorage.getItem('coverLetterTopSkills') || '';
+      const achievement = localStorage.getItem('coverLetterKeyAchievement') || '';
+      document.getElementById('topSkills').value = skills;
+    });
+
+    // Clear details
+    document.getElementById('clearDetails').addEventListener('click', () => {
+      localStorage.removeItem('coverLetterTopSkills');
+      localStorage.removeItem('coverLetterKeyAchievement');
+      document.getElementById('topSkills').value = '';
+      alert('Saved details cleared.');
+    });
+
+    // Generate cover letter
+    document.getElementById('detailsForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const topSkills = document.getElementById('topSkills').value || 'relevant skills';
+      const companyInterest = document.getElementById('companyInterest').value;
+
+      const coverLetter = \`
+Dear Hiring Manager,
+
+I am excited to apply for the \${jobTitle} position at \${companyName}. I am \${topSkills}, which makes me believe I can contribute to your team.
+
+*WRITE A SHORT "WHY IM SO GREAT" HERE*
+
+I am drawn to \${companyName} \${companyInterest ? 'because ' + companyInterest : 'for its reputation in the industry'}. I am eager to support your goals.
+
+Thank you for your time. I’d welcome the chance to discuss how I can add value to \${companyName}.
+
+Sincerely,
+*YOUR NAME*
+      \`;
+
+      const coverLetterText = document.createElement('textarea');
+      coverLetterText.value = coverLetter.trim();
+      coverLetterText.style.height = '50vh';
+      document.body.appendChild(coverLetterText);
+
+      const copyButton = document.createElement('button');
+      copyButton.textContent = 'Copy & Close';
+      copyButton.addEventListener('click', async () => {
+        await navigator.clipboard.writeText(coverLetter);
+        alert('Copied to clipboard!');
+        window.close();
+      });
+      document.body.appendChild(copyButton);
+    });
+  </script>
+</body>
+</html>
+        `);
+    });
+})();
